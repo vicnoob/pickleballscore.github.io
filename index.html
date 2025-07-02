@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pickleball 2v2 Score Tracker</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .game-container {
+            height: 100vh;
+            display: flex;
+            position: relative;
+        }
+
+        .team-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            padding: 20px;
+        }
+
+        .team-side:hover {
+            transform: scale(1.02);
+            filter: brightness(1.1);
+        }
+
+        .team-side:active {
+            transform: scale(0.98);
+        }
+
+        .team-a {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .team-b {
+            background: linear-gradient(135deg, #4834d4, #686de0);
+            color: white;
+        }
+
+        .team-name {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .score {
+            font-size: 6rem;
+            font-weight: bold;
+            text-shadow: 4px 4px 8px rgba(0,0,0,0.3);
+            margin-bottom: 1rem;
+        }
+
+        .serve-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 15px;
+            margin-bottom: 1rem;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        .serving-indicator {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .server-name {
+            font-size: 1rem;
+            margin-top: 5px;
+        }
+
+        .players {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .player {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 1rem;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .player.serving {
+            background: rgba(255, 215, 0, 0.3);
+            border: 2px solid #ffd700;
+            transform: scale(1.05);
+        }
+
+        .tap-hint {
+            font-size: 1rem;
+            opacity: 0.8;
+            text-align: center;
+        }
+
+        .divider {
+            width: 4px;
+            background: linear-gradient(to bottom, #ffffff, #f1f2f6, #ffffff);
+            box-shadow: 0 0 20px rgba(255,255,255,0.5);
+            position: relative;
+        }
+
+        .score-display {
+            z-index: 1;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: bold;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .serving-team {
+            box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 20;
+            backdrop-filter: blur(10px);
+        }
+
+        .winner-text {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: #ffd700;
+        }
+
+        .setup-modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            z-index: 30;
+            backdrop-filter: blur(10px);
+            min-width: 400px;
+        }
+
+        .setup-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input {
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .score-animation {
+            animation: scoreUp 0.6s ease-out;
+        }
+
+        @keyframes scoreUp {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        @media (max-width: 768px) {
+            .team-name {
+                font-size: 1.5rem;
+            }
+            
+            .score {
+                font-size: 4rem;
+            }
+            
+            .setup-modal {
+                min-width: 300px;
+                padding: 20px;
+            }
+            
+            .controls {
+                top: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="game-container">
+            <!-- Player Setup Modal -->
+            <div class="setup-modal" v-if="showSetup">
+                <h2 style="margin-bottom: 20px; text-align: center;">Setup Players</h2>
+                <div class="setup-form">
+                    <div class="form-group">
+                        <label>Team A - Player 1:</label>
+                        <input v-model="teamA.player1" placeholder="Enter name">
+                    </div>
+                    <div class="form-group">
+                        <label>Team A - Player 2:</label>
+                        <input v-model="teamA.player2" placeholder="Enter name">
+                    </div>
+                    <div class="form-group">
+                        <label>Team B - Player 1:</label>
+                        <input v-model="teamB.player1" placeholder="Enter name">
+                    </div>
+                    <div class="form-group">
+                        <label>Team B - Player 2:</label>
+                        <input v-model="teamB.player2" placeholder="Enter name">
+                    </div>
+                    <div class="form-group">
+                        <label>First Server:</label>
+                        <select v-model="firstServer" style="padding: 10px; border: none; border-radius: 5px;">
+                            <option value="A1">{{ teamA.player1 || 'Team A - Player 1' }}</option>
+                            <option value="A2">{{ teamA.player2 || 'Team A - Player 2' }}</option>
+                            <option value="B1">{{ teamB.player1 || 'Team B - Player 1' }}</option>
+                            <option value="B2">{{ teamB.player2 || 'Team B - Player 2' }}</option>
+                        </select>
+                    </div>
+                    <button class="btn" @click="startGame" style="margin-top: 10px; padding: 15px;">
+                        Start Game
+                    </button>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls" v-if="!showSetup">
+                <button class="btn" @click="resetGame">New Game</button>
+                <button class="btn" @click="undoLastPoint" v-if="canUndo">Undo</button>
+                <button class="btn" @click="sideOut">Side Out</button>
+                <select class="btn" v-model="winningScore" style="appearance: none;">
+                    <option value="11">Play to 11</option>
+                    <option value="15">Play to 15</option>
+                    <option value="21">Play to 21</option>
+                </select>
+            </div>
+
+            <!-- Team A Side -->
+            <div class="team-side team-a" 
+                 :class="{ 'serving-team': servingTeam === 'A' }"
+                 @click="scorePoint('A')"
+                 v-if="!showSetup">
+                <div class="team-name">Team A</div>
+                <div class="score" :class="{ 'score-animation': animateA }">{{ scoreA }}</div>
+                
+                <div class="players">
+                    <!-- Team A: Left player on top (upper), Right player on bottom (lower) -->
+                    <div class="player" :class="{ 'serving': currentServer === 'A1' }" v-if="!teamAPositions.player1">
+                        {{ teamA.player1 }} <span style="font-size: 0.8rem; opacity: 0.7;">(Left)</span>
+                    </div>
+                    <div class="player" :class="{ 'serving': currentServer === 'A2' }" v-if="!teamAPositions.player2">
+                        {{ teamA.player2 }} <span style="font-size: 0.8rem; opacity: 0.7;">(Left)</span>
+                    </div>
+                    <div class="player" :class="{ 'serving': currentServer === 'A2' }" v-if="teamAPositions.player2">
+                        {{ teamA.player2 }} <span style="font-size: 0.8rem; opacity: 0.7;">(Right)</span>
+                    </div>
+                    <div class="player" :class="{ 'serving': currentServer === 'A1' }" v-if="teamAPositions.player1">
+                        {{ teamA.player1 }} <span style="font-size: 0.8rem; opacity: 0.7;">(Right)</span>
+                    </div>
+                </div>
+
+                <div class="serve-info" v-if="servingTeam === 'A'">
+                    <div class="serving-indicator">🏓 SERVING</div>
+                    <div class="server-name">{{ getCurrentServerName() }}</div>
+                </div>
+
+                <div class="tap-hint" v-if="servingTeam === 'A'">Tap to score point</div>
+                <div class="tap-hint" v-else>Tap if Team A wins rally</div>
+            </div>
+
+            <!-- Divider with Score Display -->
+            <div class="divider" v-if="!showSetup">
+                <div class="score-display">
+                    <div>{{ scoreA }} - {{ scoreB }}</div>
+                    <div style="font-size: 1rem; margin-top: 5px;">
+                        Server: {{ serverNumber }}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team B Side -->
+            <div class="team-side team-b" 
+                 :class="{ 'serving-team': servingTeam === 'B' }"
+                 @click="scorePoint('B')"
+                 v-if="!showSetup">
+                <div class="team-name">Team B</div>
+                <div class="score" :class="{ 'score-animation': animateB }">{{ scoreB }}</div>
+                
+                <div class="players">
+                    <!-- Team B: Right player on top (upper), Left player on bottom (lower) -->
+                    <div class="player" :class="{ 'serving': currentServer === 'B1' }" v-if="teamBPositions.player1">
+                        {{ teamB.player1 }} <span style="font-size: 0.8rem; opacity: 0.7;">(Right)</span>
+                    </div>
+                    <div class="player" :class="{ 'serving': currentServer === 'B2' }" v-if="teamBPositions.player2">
+                        {{ teamB.player2 }} <span style="font-size: 0.8rem; opacity: 0.7;">(Right)</span>
+                    </div>
+                    <div class="player" :class="{ 'serving': currentServer === 'B2' }" v-if="!teamBPositions.player2">
+                        {{ teamB.player2 }} <span style="font-size: 0.8rem; opacity: 0.7;">(Left)</span>
+                    </div>
+                    <div class="player" :class="{ 'serving': currentServer === 'B1' }" v-if="!teamBPositions.player1">
+                        {{ teamB.player1 }} <span style="font-size: 0.8rem; opacity: 0.7;">(Left)</span>
+                    </div>
+                </div>
+
+                <div class="serve-info" v-if="servingTeam === 'B'">
+                    <div class="serving-indicator">🏓 SERVING</div>
+                    <div class="server-name">{{ getCurrentServerName() }}</div>
+                </div>
+
+                <div class="tap-hint" v-if="servingTeam === 'B'">Tap to score point</div>
+                <div class="tap-hint" v-else>Tap if Team B wins rally</div>
+            </div>
+
+            <!-- Game Over Modal -->
+            <div class="game-over" v-if="gameWinner">
+                <div class="winner-text">🏆 Team {{ gameWinner }} Wins! 🏆</div>
+                <div style="font-size: 1.5rem; margin-bottom: 20px;">
+                    Final Score: {{ scoreA }} - {{ scoreB }}
+                </div>
+                <div style="font-size: 1.2rem; margin-bottom: 20px;">
+                    Winners: {{ getWinningTeamNames() }}
+                </div>
+                <button class="btn" @click="resetGame" style="font-size: 1.2rem; padding: 15px 30px;">
+                    New Game
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                // Game state
+                const scoreA = ref(0);
+                const scoreB = ref(0);
+                const winningScore = ref(11);
+                const animateA = ref(false);
+                const animateB = ref(false);
+                const showSetup = ref(true);
+
+                // Player names
+                const teamA = ref({
+                    player1: 'Player A1',
+                    player2: 'Player A2'
+                });
+                const teamB = ref({
+                    player1: 'Player B1',
+                    player2: 'Player B2'
+                });
+
+                // Serving state
+                const currentServer = ref('A1'); // A1, A2, B1, B2
+                const servingTeam = ref('A');
+                const serverNumber = ref(1); // 1 or 2 (first or second server)
+                const firstServer = ref('A1');
+                const isFirstServerOfGame = ref(true);
+
+                // Position tracking - true means right side of court (even score), false means left side (odd score)
+                const teamAPositions = ref({ player1: true, player2: false }); // A1 right, A2 left initially
+                const teamBPositions = ref({ player1: true, player2: false }); // B1 right, B2 left initially
+
+                // History for undo
+                const gameHistory = ref([]);
+                const canUndo = computed(() => gameHistory.value.length > 0);
+
+                const gameWinner = computed(() => {
+                    if (scoreA.value >= winningScore.value && scoreA.value - scoreB.value >= 2) {
+                        return 'A';
+                    }
+                    if (scoreB.value >= winningScore.value && scoreB.value - scoreA.value >= 2) {
+                        return 'B';
+                    }
+                    return null;
+                });
+
+                const getCurrentServerName = () => {
+                    switch (currentServer.value) {
+                        case 'A1': return teamA.value.player1;
+                        case 'A2': return teamA.value.player2;
+                        case 'B1': return teamB.value.player1;
+                        case 'B2': return teamB.value.player2;
+                        default: return '';
+                    }
+                };
+
+                const getCorrectServer = (team) => {
+                    // Determine correct server based on team's score (even/odd) and positions
+                    if (team === 'A') {
+                        const scoreIsEven = scoreA.value % 2 === 0;
+                        // If score is even, server should be on right side; if odd, on left side
+                        if (scoreIsEven) {
+                            return teamAPositions.value.player1 ? 'A1' : 'A2';
+                        } else {
+                            return teamAPositions.value.player1 ? 'A2' : 'A1';
+                        }
+                    } else {
+                        const scoreIsEven = scoreB.value % 2 === 0;
+                        if (scoreIsEven) {
+                            return teamBPositions.value.player1 ? 'B1' : 'B2';
+                        } else {
+                            return teamBPositions.value.player1 ? 'B2' : 'B1';
+                        }
+                    }
+                };
+
+                const switchPositions = (team) => {
+                    // Switch court positions for the team that just scored
+                    if (team === 'A') {
+                        const temp = teamAPositions.value.player1;
+                        teamAPositions.value.player1 = teamAPositions.value.player2;
+                        teamAPositions.value.player2 = temp;
+                    } else {
+                        const temp = teamBPositions.value.player1;
+                        teamBPositions.value.player1 = teamBPositions.value.player2;
+                        teamBPositions.value.player2 = temp;
+                    }
+                };
+
+                const getWinningTeamNames = () => {
+                    if (gameWinner.value === 'A') {
+                        return `${teamA.value.player1} & ${teamA.value.player2}`;
+                    } else if (gameWinner.value === 'B') {
+                        return `${teamB.value.player1} & ${teamB.value.player2}`;
+                    }
+                    return '';
+                };
+
+                const startGame = () => {
+                    showSetup.value = false;
+                    currentServer.value = firstServer.value;
+                    servingTeam.value = firstServer.value.charAt(0);
+                    serverNumber.value = 1;
+                    isFirstServerOfGame.value = true;
+                    // Set initial positions based on first server choice
+                    if (firstServer.value === 'A1') {
+                        teamAPositions.value = { player1: true, player2: false }; // A1 right, A2 left
+                    } else {
+                        teamAPositions.value = { player1: false, player2: true }; // A1 left, A2 right
+                    }
+                    if (firstServer.value === 'B1') {
+                        teamBPositions.value = { player1: true, player2: false }; // B1 right, B2 left
+                    } else {
+                        teamBPositions.value = { player1: false, player2: true }; // B1 left, B2 right
+                    }
+                };
+
+                const scorePoint = (team) => {
+                    if (gameWinner.value) return;
+
+                    // Save current state for undo
+                    gameHistory.value.push({
+                        scoreA: scoreA.value,
+                        scoreB: scoreB.value,
+                        currentServer: currentServer.value,
+                        servingTeam: servingTeam.value,
+                        serverNumber: serverNumber.value,
+                        isFirstServerOfGame: isFirstServerOfGame.value,
+                        teamAPositions: { ...teamAPositions.value },
+                        teamBPositions: { ...teamBPositions.value }
+                    });
+
+                    // If the serving team scores, they keep serving and get the point
+                    if (team === servingTeam.value) {
+                        if (team === 'A') {
+                            scoreA.value++;
+                            animateA.value = true;
+                            setTimeout(() => animateA.value = false, 600);
+                        } else {
+                            scoreB.value++;
+                            animateB.value = true;
+                            setTimeout(() => animateB.value = false, 600);
+                        }
+                        
+                        // Switch positions of the serving team and update server
+                        switchPositions(team);
+                        currentServer.value = getCorrectServer(team);
+                    } else {
+                        // If the receiving team is clicked, it means they won the rally
+                        // So they get the serve but no point (side out)
+                        switchServe();
+                    }
+                };
+
+                const switchServe = () => {
+                    // Handle server rotation based on current serving team
+                    if (servingTeam.value === 'A') {
+                        // For Team A: Check if second player should serve
+                        if (serverNumber.value === 1 && !(isFirstServerOfGame.value && (scoreA.value + scoreB.value) === 0)) {
+                            // Switch to second server of Team A
+                            currentServer.value = currentServer.value === 'A1' ? 'A2' : 'A1';
+                            serverNumber.value = 2;
+                        } else {
+                            // Switch to Team B - start with correct player based on their positions
+                            servingTeam.value = 'B';
+                            // The server should be the one on the right side when team B starts serving
+                            currentServer.value = teamBPositions.value.player1 ? 'B1' : 'B2';
+                            serverNumber.value = 1;
+                            isFirstServerOfGame.value = false;
+                        }
+                    } else {
+                        // For Team B
+                        if (serverNumber.value === 1) {
+                            // Switch to second server of Team B
+                            currentServer.value = currentServer.value === 'B1' ? 'B2' : 'B1';
+                            serverNumber.value = 2;
+                        } else {
+                            // Switch to Team A - start with correct player based on their positions
+                            servingTeam.value = 'A';
+                            // The server should be the one on the right side when team A starts serving
+                            currentServer.value = teamAPositions.value.player1 ? 'A1' : 'A2';
+                            serverNumber.value = 1;
+                        }
+                    }
+                };
+
+                const sideOut = () => {
+                    // Save state for undo
+                    gameHistory.value.push({
+                        scoreA: scoreA.value,
+                        scoreB: scoreB.value,
+                        currentServer: currentServer.value,
+                        servingTeam: servingTeam.value,
+                        serverNumber: serverNumber.value,
+                        isFirstServerOfGame: isFirstServerOfGame.value,
+                        teamAPositions: { ...teamAPositions.value },
+                        teamBPositions: { ...teamBPositions.value }
+                    });
+
+                    switchServe();
+                };
+
+                const undoLastPoint = () => {
+                    if (gameHistory.value.length === 0) return;
+
+                    const lastState = gameHistory.value.pop();
+                    scoreA.value = lastState.scoreA;
+                    scoreB.value = lastState.scoreB;
+                    currentServer.value = lastState.currentServer;
+                    servingTeam.value = lastState.servingTeam;
+                    serverNumber.value = lastState.serverNumber;
+                    isFirstServerOfGame.value = lastState.isFirstServerOfGame;
+                    if (lastState.teamAPositions) teamAPositions.value = lastState.teamAPositions;
+                    if (lastState.teamBPositions) teamBPositions.value = lastState.teamBPositions;
+                };
+
+                const resetGame = () => {
+                    scoreA.value = 0;
+                    scoreB.value = 0;
+                    gameHistory.value = [];
+                    showSetup.value = true;
+                    isFirstServerOfGame.value = true;
+                    // Reset positions to starting positions
+                    teamAPositions.value = { player1: true, player2: false };
+                    teamBPositions.value = { player1: true, player2: false };
+                };
+
+                // Prevent context menu on long press (mobile)
+                onMounted(() => {
+                    document.addEventListener('contextmenu', (e) => {
+                        e.preventDefault();
+                    });
+                });
+
+                return {
+                    scoreA,
+                    scoreB,
+                    winningScore,
+                    animateA,
+                    animateB,
+                    showSetup,
+                    teamA,
+                    teamB,
+                    currentServer,
+                    servingTeam,
+                    serverNumber,
+                    firstServer,
+                    canUndo,
+                    gameWinner,
+                    teamAPositions,
+                    teamBPositions,
+                    getCurrentServerName,
+                    getWinningTeamNames,
+                    startGame,
+                    scorePoint,
+                    sideOut,
+                    undoLastPoint,
+                    resetGame
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
